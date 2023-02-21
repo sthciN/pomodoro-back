@@ -1,123 +1,65 @@
-import os
-from fastapi import FastAPI, Body, HTTPException, status
-from fastapi.responses import Response, JSONResponse
+from fastapi import FastAPI, Body, status
+from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, Field, EmailStr
-from bson import ObjectId
-from typing import Optional, List
-import motor.motor_asyncio
+from database import (todo_items_collection, todo_lists_collection,
+                      users_collection)
+from model.models import TodoItem, TodoList, User
 
 app = FastAPI()
-client = motor.motor_asyncio.AsyncIOMotorClient(os.environ["MONGODB_URL"])
-db = client.college
+
+@app.post('/user/')
+async def create_user(user: User = Body(...)):
+    user = jsonable_encoder(user)
+    result = users_collection.insert_one(user)
+    
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content={'id': str(result.inserted_id)})
 
 
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid objectid")
-        return ObjectId(v)
-
-    @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type="string")
+@app.get('/user/{user_id}')
+async def get_user(user_id: str):
+    user = users_collection.find_one({'_id': user_id})
+    
+    if user:
+        return JSONResponse(status_code=status.HTTP_200_OK, content=user)
+    
+    else:
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=f'User {user_id} not found.')
 
 
-class StudentModel(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    name: str = Field(...)
-    email: EmailStr = Field(...)
-    course: str = Field(...)
-    gpa: float = Field(..., le=4.0)
+@app.post('/todo-list/')
+async def create_todo_list(todo_list: TodoList = Body(...)):
+    todo_list = jsonable_encoder(todo_list)
+    result = todo_lists_collection.insert_one(todo_list)
 
-    class Config:
-        allow_population_by_field_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
-        schema_extra = {
-            "example": {
-                "name": "Jane Doe",
-                "email": "jdoe@example.com",
-                "course": "Experiments, Science, and Fashion in Nanophotonics",
-                "gpa": "3.0",
-            }
-        }
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content={'id': str(result.inserted_id)})
 
 
-class UpdateStudentModel(BaseModel):
-    name: Optional[str]
-    email: Optional[EmailStr]
-    course: Optional[str]
-    gpa: Optional[float]
+@app.get('/todo-list/{list_id}')
+async def get_todo_list(list_id: str):
+    todo_list = todo_lists_collection.find_one({'_id': list_id})
 
-    class Config:
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
-        schema_extra = {
-            "example": {
-                "name": "Jane Doe",
-                "email": "jdoe@example.com",
-                "course": "Experiments, Science, and Fashion in Nanophotonics",
-                "gpa": "3.0",
-            }
-        }
+    if todo_list:
+        return JSONResponse(status_code=status.HTTP_200_OK, content=todo_list)
+    
+    else:
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=f'Todo list {list_id} not found.')
 
 
-@app.post("/", response_description="Add new student", response_model=StudentModel)
-async def create_student(student: StudentModel = Body(...)):
-    student = jsonable_encoder(student)
-    new_student = await db["students"].insert_one(student)
-    created_student = await db["students"].find_one({"_id": new_student.inserted_id})
-    return JSONResponse(status_code=status.HTTP_201_CREATED, content=created_student)
+@app.post('/todo-item/')
+async def create_todo_item(todo_item: TodoItem = Body(...)):
+    todo_item = jsonable_encoder(todo_item)
+    result = todo_items_collection.insert_one(todo_item)
+    
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content={'id': str(result.inserted_id)})
 
 
-@app.get(
-    "/", response_description="List all students", response_model=List[StudentModel]
-)
-async def list_students():
-    students = await db["students"].find().to_list(1000)
-    return students
+@app.get('/todo-item/{item_id}')
+async def get_todo_item(item_id: str):
+    todo_item = todo_items_collection.find_one({'_id': item_id})
+    
+    if todo_item:
+        return JSONResponse(status_code=status.HTTP_200_OK, content=todo_item)
 
-
-@app.get(
-    "/{id}", response_description="Get a single student", response_model=StudentModel
-)
-async def show_student(id: str):
-    if (student := await db["students"].find_one({"_id": id})) is not None:
-        return student
-
-    raise HTTPException(status_code=404, detail=f"Student {id} not found")
-
-
-@app.put("/{id}", response_description="Update a student", response_model=StudentModel)
-async def update_student(id: str, student: UpdateStudentModel = Body(...)):
-    student = {k: v for k, v in student.dict().items() if v is not None}
-
-    if len(student) >= 1:
-        update_result = await db["students"].update_one({"_id": id}, {"$set": student})
-
-        if update_result.modified_count == 1:
-            if (
-                updated_student := await db["students"].find_one({"_id": id})
-            ) is not None:
-                return updated_student
-
-    if (existing_student := await db["students"].find_one({"_id": id})) is not None:
-        return existing_student
-
-    raise HTTPException(status_code=404, detail=f"Student {id} not found")
-
-
-@app.delete("/{id}", response_description="Delete a student")
-async def delete_student(id: str):
-    delete_result = await db["students"].delete_one({"_id": id})
-
-    if delete_result.deleted_count == 1:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-    raise HTTPException(status_code=404, detail=f"Student {id} not found")
+    else:
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=f'Todo item {item_id} not found.')
+    
