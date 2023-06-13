@@ -1,16 +1,20 @@
 
+import os
 import uuid
-from typing import Optional
+from typing import Optional, Union
 
+from beanie import PydanticObjectId
 from fastapi import Depends, Request
-from fastapi_users import BaseUserManager, UUIDIDMixin
-from typing import Union
+from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
+
+from utils.auth import auth_backend
+from utils.exceptions import InvalidPasswordException
 
 from .models import User, get_user_db
 from .schemas import UserCreate
-from utils.exceptions import InvalidPasswordException
 
-SECRET = "SECRET"
+SECRET = os.environ["SECRET"]
+
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     reset_password_token_secret = SECRET
     verification_token_secret = SECRET
@@ -42,11 +46,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     async def on_after_register(self, user: User, request: Optional[Request] = None):
         print(f"User {user.id} has registered.")
 
-    async def on_after_forgot_password(
-        self, user: User, token: str, request: Optional[Request] = None
-    ):
-        print(f"User {user.id} has forgot their password. Reset token: {token}")
-
     async def on_after_request_verify(
         self, user: User, token: str, request: Optional[Request] = None
     ):
@@ -55,3 +54,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
 async def get_user_manager(user_db=Depends(get_user_db)):
     yield UserManager(user_db)
+    
+fastapi_users = FastAPIUsers[User, PydanticObjectId](get_user_manager, [auth_backend])
+
+current_active_user = fastapi_users.current_user(active=True)
