@@ -38,7 +38,7 @@ app.include_router(
 
 @app.on_event("startup")
 async def on_startup():
-    init_beanie(
+    await init_beanie(
         database=db,  
         document_models=[
             User,  

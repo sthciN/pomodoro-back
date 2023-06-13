@@ -6,6 +6,6 @@ class InvalidPasswordException(StarletteHTTPException):
     pass
 
 
-@app.exception_handler(StarletteHTTPException)
-def handle_exception(e):
-    return PlainTextResponse(str(e.detail), status_code = e.status_code)
+# @app.exception_handler(StarletteHTTPException)
+# def handle_exception(e):
+#     return PlainTextResponse(str(e.detail), status_code = e.status_code)
