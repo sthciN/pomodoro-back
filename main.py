@@ -1,15 +1,30 @@
-from fastapi import FastAPI, Body, status
-from fastapi.responses import JSONResponse
+from dotenv import find_dotenv, load_dotenv
+from fastapi import Body, status
 from fastapi.encoders import jsonable_encoder
-from database import (todo_items_collection, todo_lists_collection,
+from fastapi.responses import JSONResponse
+
+from app import app
+from database import (db, todo_items_collection, todo_lists_collection,
                       users_collection)
 from model.models import TodoItem, TodoList, User
 
-app = FastAPI()
+from beanie import init_beanie
 
-@app.post('/user/')
+
+@app.on_event("startup")
+async def on_startup():
+    await init_beanie(
+        database=db,  
+        document_models=[
+            User,  
+        ],
+    )
+
+
+@app.post('/user')
 async def create_user(user: User = Body(...)):
     user = jsonable_encoder(user)
+    print('user', user)
     result = users_collection.insert_one(user)
     
     return JSONResponse(status_code=status.HTTP_201_CREATED, content={'id': str(result.inserted_id)})
@@ -26,7 +41,7 @@ async def get_user(user_id: str):
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=f'User {user_id} not found.')
 
 
-@app.post('/todo-list/')
+@app.post('/todo-list')
 async def create_todo_list(todo_list: TodoList = Body(...)):
     todo_list = jsonable_encoder(todo_list)
     result = todo_lists_collection.insert_one(todo_list)
@@ -45,7 +60,7 @@ async def get_todo_list(list_id: str):
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=f'Todo list {list_id} not found.')
 
 
-@app.post('/todo-item/')
+@app.post('/todo-item')
 async def create_todo_item(todo_item: TodoItem = Body(...)):
     todo_item = jsonable_encoder(todo_item)
     result = todo_items_collection.insert_one(todo_item)
