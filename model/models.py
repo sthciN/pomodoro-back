@@ -1,6 +1,9 @@
-from pydantic import BaseModel, EmailStr, Field
 from typing import Union
+
+from beanie import PydanticObjectId
 from bson import ObjectId
+from fastapi_users.db import BeanieBaseUser, BeanieUserDatabase
+from pydantic import BaseModel, EmailStr, Field
 
 
 class PyObjectId(ObjectId):
@@ -18,7 +21,7 @@ class PyObjectId(ObjectId):
     def __modify_schema__(cls, field_schema):
         field_schema.update(type="string")
 
-class User(BaseModel):
+class User(BeanieBaseUser[PydanticObjectId]):
     id: PyObjectId = Field(default_factory=PyObjectId, alias='_id')
     name: str = Field(min_length=3, max_length=300)
     username: str = Field(min_length=3, max_length=256)
@@ -28,6 +31,9 @@ class User(BaseModel):
     class Config:
         arbitrary_types_allowed: False
         json_encoders = {ObjectId: str}
+
+async def get_user_db():
+    yield BeanieUserDatabase(User)
 
 class TodoList(BaseModel):
     id: PyObjectId = Field(default_factory=PyObjectId, alias='_id')
