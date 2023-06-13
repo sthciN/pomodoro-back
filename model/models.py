@@ -1,9 +1,9 @@
 from typing import Union
 
-from beanie import PydanticObjectId
 from bson import ObjectId
 from fastapi_users.db import BeanieBaseUser, BeanieUserDatabase
 from pydantic import BaseModel, EmailStr, Field
+from beanie import Document
 
 
 class PyObjectId(ObjectId):
@@ -21,7 +21,7 @@ class PyObjectId(ObjectId):
     def __modify_schema__(cls, field_schema):
         field_schema.update(type="string")
 
-class User(BeanieBaseUser[PydanticObjectId]):
+class User(BeanieBaseUser, Document):
     id: PyObjectId = Field(default_factory=PyObjectId, alias='_id')
     name: str = Field(min_length=3, max_length=300)
     username: str = Field(min_length=3, max_length=256)
