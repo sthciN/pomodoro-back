@@ -1,5 +1,4 @@
-from dotenv import find_dotenv, load_dotenv
-from fastapi import Body, status
+from fastapi import Body, status, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
@@ -9,17 +8,46 @@ from database import (db, todo_items_collection, todo_lists_collection,
 from model.models import TodoItem, TodoList, User
 
 from beanie import init_beanie
+from utils.auth import auth_backend
+from model.users import current_active_user, fastapi_users
+from model.schemas import UserRead, UserCreate, UserUpdate
 
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
+)
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_reset_password_router(),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_verify_router(UserRead),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_users_router(UserRead, UserUpdate),
+    prefix="/users",
+    tags=["users"],
+)
 
 @app.on_event("startup")
 async def on_startup():
-    await init_beanie(
+    init_beanie(
         database=db,  
         document_models=[
             User,  
         ],
     )
 
+@app.get("/authenticated-route")
+async def authenticated_route(user: User = Depends(current_active_user)):
+    return {"message": f"Hello {user.email}!"}
 
 @app.post('/user')
 async def create_user(user: User = Body(...)):
