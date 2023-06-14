@@ -1,6 +1,6 @@
 # Pomodoro back
 
 ## Start
-```uvicorn app:app --reload```
+```uvicorn main:app --reload```
 
 fastapi mongodb
