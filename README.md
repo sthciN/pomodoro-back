@@ -9,3 +9,22 @@ I have utilized fastapi-users for user registration and user authentication.
 
 ## Start
 ```uvicorn main:app --reload```
+
+
+```
+├── README.md
+├── app
+│   ├── __init__.py
+├── database.py
+├── main.py
+├── model
+│   ├── models.py
+│   ├── schemas.py
+│   └── users.py
+├── requirements.txt
+└── utils
+    ├── auth.py
+    ├── email.py
+    └── exceptions.py
+
+```
