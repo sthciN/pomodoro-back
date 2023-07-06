@@ -32,7 +32,10 @@ I have utilized fastapi-users for user registration and user authentication.
 
 ## Routes
 
-Auth router: /login and /logout 
-Register router: /register 
-Reset password router: /forgot-password and /reset-password
-Verify router: /request-verify-token and /verify (User can login only after verification)
+Auth router: `/login and /logout`
+
+Register router: `/register`
+
+Reset password router: `/forgot-password and /reset-password`
+
+Verify router: `/request-verify-token` and `/verify` (User can login only after verification)
